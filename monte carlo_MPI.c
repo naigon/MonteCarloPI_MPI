@@ -3,57 +3,30 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-#include "mpi.h"
+#include <mpi.h>
 
-
-#define N_PONTOS 50000 //numero de pontos utilizados no calculo da aproximação
+#define N_PONTOS 1000000 //numero de pontos utilizados no calculo da aproximação
 #define PI 3.141592653589793 //valor de pi até a 15a casa depois da virgula, apenas para fins de comparação com o valor obtido
 
 double gera_coord(); //função que gera numeros aleatorios
-void calcula_pi(); //função para o calculo do valor de pi
 
 int main(int argc, char* argv[]){
-printf("################### MONTE CARLO PI ###################\n\n");
-
-
-srand(time(NULL)); //inicia gerador de numeros com a semente
-clock_t start_time; //variavel para calculo do tempo de execução
-start_time = clock();
-
-calcula_pi(); //chamada da função para o calculo de PI
-
-double tempo = (clock() - start_time) / (double)CLOCKS_PER_SEC; //obtem o tempo de execução depois do retorno de calcula_pi()
-printf("[TEMPO TOTAL DE EXECUCAO] = %.2f segundos \n\n",tempo); // imprime tempo na tela
-
-return 0;
-}
-
-/*	- Corpo da função geradora de numeros aleatorios,
-ela gera um double aletório, e retorna só a parte
-após a virgula, pois o objetivo é obter um valor real 
-entre 0 e 1 nas coordenadas do ponto */
-
-double gera_coord(){
-	double aux=100.0*((double)(rand())/RAND_MAX);
-	aux=aux - (int)(aux);
-	return aux;
-}
-
-//corpo da função que calcula o valor de PI
-void calcula_pi(){
-int myid;
-int reducedpdentro;                   //total number of "good" points from all nodes
-int reducednptos;                   //total number of ALL points from all nodes
-    MPI_Init(&argc, &argv);                 //Start MPI
-    MPI_Comm_rank(MPI_COMM_WORLD, &myid);           //get rank of node's process
+	
+	printf("################### MONTE CARLO PI ###################\n\n");
+	
+	int myid; 	//id do processo/thread
+	int reducedpdentro;  //total de pontos dentro
+	int reducednptos;     //numero total de prontos
+   
+	MPI_Init(&argc, &argv);                 //inicia MPI
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);   //pega o rank de cada processo
  
 	int i=0;
 	double x=0,y=0;
 	int pdentro=0;
 	double valor_pi=0,erro=0;
 	
-if(myid != 0){
+	if(myid != 0){
 	
 	for(i=0;i<N_PONTOS;i++){
 		x=gera_coord(); //gera coordenada x do ponto
@@ -64,11 +37,12 @@ if(myid != 0){
 		}
 	}
 }
+	//reducoes das variaveis de contagem de pontos e numero de pontos
 	MPI_Reduce(&pdentro, &reducedpdentro, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Reduce(&N_PONTOS, &reducednptos, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    reducednptos -= N_PONTOS;                  //to compensate for no loop on master node
+    reducednptos -= N_PONTOS;  //compensa os loops fora do processo mestre
  
-    if (myid == 0)                      //if root process
+    if (myid == 0)      
     {
         valor_pi = 4.0*((double)reducedpdentro/(double)reducednptos);
 		erro = valor_pi - PI; //calcula o erro(diferença em relação ao valor ideal de PI)
@@ -85,5 +59,16 @@ if(myid != 0){
  
     MPI_Finalize();
 
+return 0;
+}
 
+/*	- Corpo da função geradora de numeros aleatorios,
+ela gera um double aletório, e retorna só a parte
+após a virgula, pois o objetivo é obter um valor real 
+entre 0 e 1 nas coordenadas do ponto */
+
+double gera_coord(){
+	double aux=100.0*((double)(rand())/RAND_MAX);
+	aux=aux - (int)(aux);
+	return aux;
 }
