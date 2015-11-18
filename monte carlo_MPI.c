@@ -7,8 +7,6 @@
 #include "mpi.h"
 
 
-
-
 #define N_PONTOS 50000 //numero de pontos utilizados no calculo da aproximação
 #define PI 3.141592653589793 //valor de pi até a 15a casa depois da virgula, apenas para fins de comparação com o valor obtido
 
@@ -45,14 +43,14 @@ double gera_coord(){
 //corpo da função que calcula o valor de PI
 void calcula_pi(){
 int myid;
-int reducedcount;                   //total number of "good" points from all nodes
-int reducedniter;                   //total number of ALL points from all nodes
+int reducedpdentro;                   //total number of "good" points from all nodes
+int reducednptos;                   //total number of ALL points from all nodes
     MPI_Init(&argc, &argv);                 //Start MPI
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);           //get rank of node's process
  
 	int i=0;
 	double x=0,y=0;
-	int pdentro=0,pfora=0;
+	int pdentro=0;
 	double valor_pi=0,erro=0;
 	
 if(myid != 0){
@@ -66,18 +64,18 @@ if(myid != 0){
 		}
 	}
 }
-	MPI_Reduce(&count, &reducedcount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&niter, &reducedniter, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    reducedniter -= N_PONTOS;                  //to compensate for no loop on master node
+	MPI_Reduce(&pdentro, &reducedpdentro, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&N_PONTOS, &reducednptos, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    reducednptos -= N_PONTOS;                  //to compensate for no loop on master node
  
     if (myid == 0)                      //if root process
     {
-        valor_pi = ((double)reducedcount/(double))*4.0;
-		erro = valor_pi - PI; //calcula o erro(diferença em relação ao valor ideal de PI)              //p = 4(m/n)
+        valor_pi = 4.0*((double)reducedpdentro/(double)reducednptos);
+		erro = valor_pi - PI; //calcula o erro(diferença em relação ao valor ideal de PI)
         printf("\n");
-		printf("[NUMERO TOTAL DE PONTOS] = %d \n\n",reducedniter);
-		printf("[PONTOS DENTRO DO CIRCULO] = %d \n\n",reducedcount);
-		printf("[PONTOS FORA DO CIRCULO] = %d \n\n",(reducedniter-reducedcount));
+		printf("[NUMERO TOTAL DE PONTOS] = %d \n\n",reducednptos);
+		printf("[PONTOS DENTRO DO CIRCULO] = %d \n\n",reducedpdentro);
+		printf("[PONTOS FORA DO CIRCULO] = %d \n\n",(reducednptos-reducedpdentro));
 		printf("[VALOR APROXIMADO DE PI] = %.15f \n\n",valor_pi);
 		printf("[VALOR IDEAL DE PI] = %.15f \n\n",PI);
 		printf("[DIFERENÇA EM RELACAO AO PI IDEAL] = %.15f \n\n",erro);
