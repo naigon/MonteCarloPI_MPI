@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include "mpi.h"
+
+
 
 
 #define N_PONTOS 50000 //numero de pontos utilizados no calculo da aproximação
@@ -12,8 +15,9 @@
 double gera_coord(); //função que gera numeros aleatorios
 void calcula_pi(); //função para o calculo do valor de pi
 
-int main(void){
+int main(int argc, char* argv[]){
 printf("################### MONTE CARLO PI ###################\n\n");
+
 
 srand(time(NULL)); //inicia gerador de numeros com a semente
 clock_t start_time; //variavel para calculo do tempo de execução
@@ -40,34 +44,48 @@ double gera_coord(){
 
 //corpo da função que calcula o valor de PI
 void calcula_pi(){
-
+int myid;
+int reducedcount;                   //total number of "good" points from all nodes
+int reducedniter;                   //total number of ALL points from all nodes
+    MPI_Init(&argc, &argv);                 //Start MPI
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);           //get rank of node's process
+ 
 	int i=0;
 	double x=0,y=0;
 	int pdentro=0,pfora=0;
 	double valor_pi=0,erro=0;
 	
-
+if(myid != 0){
 	
 	for(i=0;i<N_PONTOS;i++){
 		x=gera_coord(); //gera coordenada x do ponto
 		y=gera_coord(); //gera coordenada y do ponto
 		//printf("P(%d) x=%.15f  y=%.15f \n",i,x,y); //print auxiliar para verificar geração das coordenadas
 		if((x*x + y*y) <= 1) //soma os quadrados das coordenadas
-			pdentro++; //se a soma dos quadrados for menor ou igual a 1, ponto caiu dentro
-		else
-			pfora++;//se a soma dos quadrados for maior que 1, ponto caiu fora				
-	}		
+		{	++pdentro; //se a soma dos quadrados for menor ou igual a 1, ponto caiu dentro
+		}
+	}
+}
+	MPI_Reduce(&count, &reducedcount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&niter, &reducedniter, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    reducedniter -= N_PONTOS;                  //to compensate for no loop on master node
+ 
+    if (myid == 0)                      //if root process
+    {
+        valor_pi = ((double)reducedcount/(double))*4.0;
+		erro = valor_pi - PI; //calcula o erro(diferença em relação ao valor ideal de PI)              //p = 4(m/n)
+        printf("\n");
+		printf("[NUMERO TOTAL DE PONTOS] = %d \n\n",reducedniter);
+		printf("[PONTOS DENTRO DO CIRCULO] = %d \n\n",reducedcount);
+		printf("[PONTOS FORA DO CIRCULO] = %d \n\n",(reducedniter-reducedcount));
+		printf("[VALOR APROXIMADO DE PI] = %.15f \n\n",valor_pi);
+		printf("[VALOR IDEAL DE PI] = %.15f \n\n",PI);
+		printf("[DIFERENÇA EM RELACAO AO PI IDEAL] = %.15f \n\n",erro);
+       
+ 
+    }
+ 
+    MPI_Finalize();
 
-valor_pi = 4.0*(((double)pdentro)/((double)N_PONTOS)); //calcula aproximado de PI
-erro = valor_pi - PI; //calcula o erro(diferença em relação ao valor ideal de PI)
-
-//imprime informações na tela
-printf("\n");
-printf("[NUMERO TOTAL DE PONTOS] = %d \n\n",N_PONTOS);
-printf("[PONTOS DENTRO DO CIRCULO] = %d \n\n",pdentro);
-printf("[PONTOS FORA DO CIRCULO] = %d \n\n",pfora);
-printf("[VALOR APROXIMADO DE PI] = %.15f \n\n",valor_pi);
-printf("[VALOR IDEAL DE PI] = %.15f \n\n",PI);
-printf("[DIFERENÇA EM RELACAO AO PI IDEAL] = %.15f \n\n",erro);
 
 }
