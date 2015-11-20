@@ -1,32 +1,31 @@
 //NAIGON MEDEIROS MARTINS
-//CALCULO DE PI PELO METODO DE MONTE CARLO USANDO THREADS(MPI)
+//CALCULO DE PI PELO METODO DE MONTE CARLO USANDO THREADS (MPI)
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>
 
-#define N_PONTOS 1000000 //numero de pontos utilizados no calculo da aproximação
-#define PI 3.141592653589793 //valor de pi até a 15a casa depois da virgula, apenas para fins de comparação com o valor obtido
+#define N_PONTOS 1000000 //numero de pontos utilizados no calculo da aproximacao
+#define PI 3.141592653589793 //valor de pi ate a 15a casa depois da virgula, apenas para fins de comparacao com o valor obtido
 
-double gera_coord(); //função que gera numeros aleatorios
+double gera_coord(); //funcao que gera numeros aleatorios
 
 int main(int argc, char* argv[]){
 	
 	printf("################### MONTE CARLO PI ###################\n\n");
 	
 	int myid; 	//id do processo/thread
-	int reducedpdentro;  //total de pontos dentro
-	int reducednptos;     //numero total de prontos
+	int reducedpdentro;  //total de pontos dentro(variavel usada na reducao)
+	int reducednptos;     //numero total de prontos(variavel usada na reducao)
+   	int i=0;
+	double x=0,y=0;
+	int pdentro=0; //contador de pontos dentro
+	double valor_pi=0,erro=0;
    
 	MPI_Init(&argc, &argv);                 //inicia MPI
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);   //pega o rank de cada processo
- 
-	int i=0;
-	double x=0,y=0;
-	int pdentro=0;
-	double valor_pi=0,erro=0;
 	
-	if(myid != 0){
+	if(myid != 0){ //para processos nao raiz
 	
 	for(i=0;i<N_PONTOS;i++){
 		x=gera_coord(); //gera coordenada x do ponto
@@ -42,10 +41,10 @@ int main(int argc, char* argv[]){
     MPI_Reduce(&N_PONTOS, &reducednptos, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
     reducednptos -= N_PONTOS;  //compensa os loops fora do processo mestre
  
-    if (myid == 0)      
+    if (myid == 0)    //para processo raiz  
     {
         valor_pi = 4.0*((double)reducedpdentro/(double)reducednptos);
-		erro = valor_pi - PI; //calcula o erro(diferença em relação ao valor ideal de PI)
+		erro = valor_pi - PI; //calcula o erro(diferenca em relacao ao valor ideal de PI)
         printf("\n");
 		printf("[NUMERO TOTAL DE PONTOS] = %d \n\n",reducednptos);
 		printf("[PONTOS DENTRO DO CIRCULO] = %d \n\n",reducedpdentro);
@@ -54,17 +53,16 @@ int main(int argc, char* argv[]){
 		printf("[VALOR IDEAL DE PI] = %.15f \n\n",PI);
 		printf("[DIFERENÇA EM RELACAO AO PI IDEAL] = %.15f \n\n",erro);
        
- 
     }
  
-    MPI_Finalize();
+    MPI_Finalize(); //termina instancia do MPI
 
 return 0;
 }
 
-/*	- Corpo da função geradora de numeros aleatorios,
-ela gera um double aletório, e retorna só a parte
-após a virgula, pois o objetivo é obter um valor real 
+/*	- Corpo da funcao geradora de numeros aleatorios,
+ela gera um double aletorio, e retorna so a parte
+apos a virgula, pois o objetivo eh obter um valor real 
 entre 0 e 1 nas coordenadas do ponto */
 
 double gera_coord(){
